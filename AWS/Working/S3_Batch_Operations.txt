@@ -1,0 +1,37 @@
+Amazon S3 Batch Job
+-----------------
+For Large scale operations for Amazon s3 objects
+-Create a bucket and upload some data into it
+-Within your bucket, get into management tab and then inventory
+-create an inventory ( which will be used by batch operations to move our files)
+ :name
+ :destination bucket: choose a bucket
+ :Output format: csv (s3 can use this format without modifying)
+ : Object versions: current
+ -->save
+Note** Shows - Inventory successfully saved
+             - Bucket policy created
+
+Now get into bucket where inventory was created and get the 'manifest.json' file.
+
+Working with Batch operations:
+-create job
+-create manifest : choose your path of manifest.json
+-<object version id for versioning enabled (optional)>
+-Choose operation: PUT  copy
+-choose output bucket
+-storage class: standard
+-encryption: none
+-ACL: as it is
+-Tags: as it is
+-Metadata: as it is
+-Description: as it is
+--rest all as it is
+--choose destination for 'path to completion report destination'
+--permissions (choose a role/create a role to access s3 ) [s3forBatchops]
+---Review
+
+#or create custom manifest in csv format and use it
+refer to 'custom-manifest.csv' file
+
+

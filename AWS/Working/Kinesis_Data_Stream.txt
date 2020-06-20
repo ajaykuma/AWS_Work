@@ -1,0 +1,186 @@
+Kinesis Data Stream
+---------------
+reference:https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
+#Create a data stream
+#get arn
+arn:aws:kinesis:us-east-1:789922351583:stream/StreamTest
+
+========
+Install or update the AWS CLI version 2 on Windows using the MSI installer
+Download the AWS CLI MSI installer for Windows (64-bit) at https://awscli.amazonaws.com/AWSCLIV2.msi.
+
+To update your current installation of AWS CLI version 2 on Windows, download a new installer each time you update to overwrite previous versions. 
+======
+c:\>aws --version
+C:\>aws configure
+AWS Access Key ID [None]: 
+AWS Secret Access Key [None]: 
+Default region name [None]: us-east-1
+Default output format [None]: json
+
+or in windows
+C:\Users\Win10>aws --version
+aws-cli/2.0.19 Python/3.7.7 Windows/10 botocore/2.0.0dev23
+
+C:\Users\Win10>set AWS_ACCESS_KEY_ID=
+
+C:\Users\Win10>set AWS_SECRET_ACCESS_KEY=
+
+C:\Users\Win10>set AWS_SESSION_TOKEN=
+
+=============
+#working with data stream
+
+#describe aws stream
+aws kinesis describe-stream --stream-name StreamTest --region us-east-1
+
+#sample output
+C:\Users\Win10>aws kinesis describe-stream --stream-name StreamTest --region us-east-1
+{
+    "StreamDescription": {
+        "Shards": [
+            {
+                "ShardId": "shardId-000000000000",
+                "HashKeyRange": {
+                    "StartingHashKey": "0",
+                    "EndingHashKey": "170141183460469231731687303715884105727"
+                },
+                "SequenceNumberRange": {
+                    "StartingSequenceNumber": "49607739360503972839417377261542307511104313164568723458"
+                }
+            },
+            {
+                "ShardId": "shardId-000000000001",
+                "HashKeyRange": {
+                    "StartingHashKey": "170141183460469231731687303715884105728",
+                    "EndingHashKey": "340282366920938463463374607431768211455"
+                },
+                "SequenceNumberRange": {
+                    "StartingSequenceNumber": "49607739360526273584615907884683843229376961526074703890"
+                }
+            }
+        ],
+        "StreamARN": "arn:aws:kinesis:us-east-1:789922351583:stream/StreamTest",
+        "StreamName": "StreamTest",
+        "StreamStatus": "ACTIVE",
+        "RetentionPeriodHours": 24,
+        "EnhancedMonitoring": [
+            {
+                "ShardLevelMetrics": []
+            }
+        ],
+        "EncryptionType": "NONE",
+        "KeyId": null,
+        "StreamCreationTimestamp": "2020-06-07T17:41:40+02:00"
+    }
+}
+
+
+#putting data/record in the stream
+aws kinesis put-record --stream-name StreamTest --partition-key 1 --data 1 --region us-east-1
+aws kinesis put-record --stream-name StreamTest --partition-key 1 --data 12 --region us-east-1
+aws kinesis put-record --stream-name StreamTest --partition-key 1 --data 134 --region us-east-1
+
+#sample
+C:\Users\Win10>aws kinesis put-record --stream-name StreamTest --partition-key 1 --data 12 --region us-east-1 --cli-binary-format raw-in-base64-out
+{
+    "ShardId": "shardId-000000000001",
+    "SequenceNumber": "49607739360526273584615907892315791928604175223220076562"
+}
+
+
+C:\Users\Win10>aws kinesis put-record --stream-name StreamTest --partition-key 0 --data 123 --region us-east-1 --cli-binary-format raw-in-base64-out
+{
+    "ShardId": "shardId-000000000001",
+    "SequenceNumber": "49607739360526273584615907892317000854423791295503794194"
+}
+
+
+C:\Users\Win10>aws kinesis put-record --stream-name StreamTest --partition-key 2 --data 123 --region us-east-1 --cli-binary-format raw-in-base64-out
+{
+    "ShardId": "shardId-000000000001",
+    "SequenceNumber": "49607739360526273584615907892318209780243406680592744466"
+}
+
+
+C:\Users\Win10>aws kinesis put-record --stream-name StreamTest --partition-key 2 --data 1234 --region us-east-1 --cli-binary-format raw-in-base64-out
+{
+    "ShardId": "shardId-000000000001",
+    "SequenceNumber": "49607739360526273584615907892319418706063022615437508626"
+}
+
+
+C:\Users\Win10>aws kinesis put-record --stream-name StreamTest --partition-key 1 --data 128 --region us-east-1 --cli-binary-format raw-in-base64-out
+{
+    "ShardId": "shardId-000000000001",
+    "SequenceNumber": "49607739360526273584615907892320627631882637931806982162"
+}
+
+
+C:\Users\Win10>aws kinesis put-record --stream-name StreamTest --partition-key 0 --data 128 --region us-east-1 --cli-binary-format raw-in-base64-out
+{
+    "ShardId": "shardId-000000000001",
+    "SequenceNumber": "49607739360526273584615907892321836557702253110737502226"
+}
+
+
+#using shard iterator( iterating through set of records in our data stream)
+C:\Users\Win10>aws kinesis get-shard-iterator --stream-name StreamTest --shard-iterator-type TRIM_HORIZON --shard-id shardId-000000000001
+{
+    "ShardIterator": "AAAAAAAAAAElDNHdjiq51A5kr8eu9G/Bh3nh9yNzNAp5Ux7ab5/As3R2/VmHBZrOqsGbNQpPB6MzeBm0d3HS9CNz2heS63LgizutkkDDOnzO1BB0GJU2a2rzpK0uOwFs12LWgavWKInaSoOqBWIYNxEDWMfTVSVlB6qrXTOJCqi90wTbDYYWihQPue+dz84yRUtzw02oX25dDMQaW8Ol/hzZGSm8utPz"
+}
+
+#Once we get shard Iterator, we need to get records
+aws kinesis get-records --shard-iterator xxxxxx --limit 3
+
+#sample
+C:\Users\Win10>aws kinesis get-records --shard-iterator AAAAAAAAAAElDNHdjiq51A5kr8eu9G/Bh3nh9yNzNAp5Ux7ab5/As3R2/VmHBZrOqsGbNQpPB6MzeBm0d3HS9CNz2heS63LgizutkkDDOnzO1BB0GJU2a2rzpK0uOwFs12LWgavWKInaSoOqBWIYNxEDWMfTVSVlB6qrXTOJCqi90wTbDYYWihQPue+dz84yRUtzw02oX25dDMQaW8Ol/hzZGSm8utPz --limit 10
+{
+    "Records": [
+        {
+            "SequenceNumber": "49607739360526273584615907892314583002784558532461068306",
+            "ApproximateArrivalTimestamp": "2020-06-07T17:55:37.281000+02:00",
+            "Data": "MQ==",
+            "PartitionKey": "1"
+        },
+        {
+            "SequenceNumber": "49607739360526273584615907892315791928604175223220076562",
+            "ApproximateArrivalTimestamp": "2020-06-07T17:56:07.391000+02:00",
+            "Data": "MTI=",
+            "PartitionKey": "1"
+        },
+        {
+            "SequenceNumber": "49607739360526273584615907892317000854423791295503794194",
+            "ApproximateArrivalTimestamp": "2020-06-07T17:56:28.812000+02:00",
+            "Data": "MTIz",
+            "PartitionKey": "0"
+        },
+        {
+            "SequenceNumber": "49607739360526273584615907892318209780243406680592744466",
+            "ApproximateArrivalTimestamp": "2020-06-07T17:56:39.310000+02:00",
+            "Data": "MTIz",
+            "PartitionKey": "2"
+        },
+        {
+            "SequenceNumber": "49607739360526273584615907892319418706063022615437508626",
+            "ApproximateArrivalTimestamp": "2020-06-07T17:56:57.640000+02:00",
+            "Data": "MTIzNA==",
+            "PartitionKey": "2"
+        },
+        {
+            "SequenceNumber": "49607739360526273584615907892320627631882637931806982162",
+            "ApproximateArrivalTimestamp": "2020-06-07T17:57:08.358000+02:00",
+            "Data": "MTI4",
+            "PartitionKey": "1"
+        },
+        {
+            "SequenceNumber": "49607739360526273584615907892321836557702253110737502226",
+            "ApproximateArrivalTimestamp": "2020-06-07T17:57:16.371000+02:00",
+            "Data": "MTI4",
+
+for more commands:
+https://docs.aws.amazon.com/cli/latest/reference/kinesis/index.html
+
+===============
+
+

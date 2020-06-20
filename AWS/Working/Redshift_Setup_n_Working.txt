@@ -1,0 +1,222 @@
+Instructions:
+
+Redshift setup and usage:
+Reference Link:
+https://docs.aws.amazon.com/redshift/latest/gsg/getting-started.html
+
+Create roles that allows redshift to access data from s3
+Create redshift cluster
+
+Get the jdbc url
+jdbc:redshift://redshift-cluster-1-aj.co7o4qv18zxu.us-east-1.redshift.amazonaws.com:5439/dev
+
+Get the role arn (will be needed when we load data from s3 to redshift )
+arn:aws:iam::789922351583:role/mynewr1rss3
+arn:aws:iam::789922351583:role/myrolrss3
+
+Test your connection
+Amazon Redshift retains a great deal of metadata about the various databases within a cluster and finding a 
+list of tables is no exception to this rule.
+The most useful object for this task is the PG_TABLE_DEF table, which as the name implies, 
+contains table definition information. Note: The PG_ prefix is just a holdover from PostgreSQL, 
+the database technology from which Amazon Redshift was developed.
+To begin finding information about the tables in the system, you can simply return columns from PG_TABLE_DEF:
+
+SELECT
+  *
+FROM
+  PG_TABLE_DEF;
+
+For better or worse, PG_TABLE_DEF contains information about everything in the system, 
+so the results of such an open query will be massive, but should give you an idea of what 
+PG_TABLE_DEF is capable of:
+schemaname  tablename                   column          type            encoding distkey sortkey notnull
+--------------------------------------------------------------------------------------------------------
+pg_catalog  padb_config_harvest         name            character(136)  none     false   0       true
+pg_catalog  padb_config_harvest         harvest         integer         none     false   0       true
+pg_catalog  padb_config_harvest         archive         integer         none     false   0       true
+pg_catalog  padb_config_harvest         directory       character(500)  none     false   0       true
+
+To limit the results to user-defined tables, it’s important to specify the schemaname column to return 
+only results which are public:
+
+SELECT
+  *
+FROM
+  PG_TABLE_DEF
+WHERE
+  schemaname = 'public';
+schemaname  tablename   column   type                   encoding    distkey sortkey notnull
+-------------------------------------------------------------------------------------------
+public      category    catid    smallint               none        true    1       true
+public      category    catgroup character varying(10)  none        false   0       false
+public      category    catname  character varying(10)  none        false   0       false
+public      category    catdesc  character varying(50)  none        false   0       false
+
+This shows us all the columns (and their associated tables) that exist and that are public 
+(and therefore user-created).
+
+Lastly, if we are solely interested only the names of tables which are user-defined, 
+we’ll need to filter the above results by retrieving DISTINCT items from within the tablename column:
+
+SELECT
+  DISTINCT tablename
+FROM
+  PG_TABLE_DEF
+WHERE
+  schemaname = 'public';
+
+This returns only the unique public tables within the system:
+tablename
+---------
+category
+date
+event
+listing
+sales
+users
+venue
+
+create your bucket (mysamplebu/tickit) and then upload sample date
+
+--creating tables
+create table users(
+	userid integer not null distkey sortkey,
+	username char(8),
+	firstname varchar(30),
+	lastname varchar(30),
+	city varchar(30),
+	state char(2),
+	email varchar(100),
+	phone char(14),
+	likesports boolean,
+	liketheatre boolean,
+	likeconcerts boolean,
+	likejazz boolean,
+	likeclassical boolean,
+	likeopera boolean,
+	likerock boolean,
+	likevegas boolean,
+	likebroadway boolean,
+	likemusicals boolean);
+
+create table venue(
+	venueid smallint not null distkey sortkey,
+	venuename varchar(100),
+	venuecity varchar(30),
+	venuestate char(2),
+	venueseats integer);
+
+create table category(
+	catid smallint not null distkey sortkey,
+	catgroup varchar(10),
+	catname varchar(10),
+	catdesc varchar(50));
+
+create table date(
+	dateid smallint not null distkey sortkey,
+	caldate date not null,
+	day character(3) not null,
+	week smallint not null,
+	month character(5) not null,
+	qtr character(5) not null,
+	year smallint not null,
+	holiday boolean default('N'));
+
+create table event(
+	eventid integer not null distkey,
+	venueid smallint not null,
+	catid smallint not null,
+	dateid smallint not null sortkey,
+	eventname varchar(200),
+	starttime timestamp);
+
+create table listing(
+	listid integer not null distkey,
+	sellerid integer not null,
+	eventid integer not null,
+	dateid smallint not null  sortkey,
+	numtickets smallint not null,
+	priceperticket decimal(8,2),
+	totalprice decimal(8,2),
+	listtime timestamp);
+
+create table sales(
+	salesid integer not null,
+	listid integer not null distkey,
+	sellerid integer not null,
+	buyerid integer not null,
+	eventid integer not null,
+	dateid smallint not null sortkey,
+	qtysold smallint not null,
+	pricepaid decimal(8,2),
+	commission decimal(8,2),
+	saletime timestamp);
+
+Lets upload data to redshift tables from s3:
+
+Download file tickitdb.zip that contains individual sample data files. 
+Unzip and load the individual files to a tickit folder in your Amazon S3 bucket in your AWS Region.
+Edit the COPY commands in this tutorial to point to the files in your Amazon S3 bucket.
+
+copy data from s3
+
+copy users from 's3://mysamplebu/tickit/allusers_pipe.txt' 
+credentials 'aws_iam_role=arn:aws:iam::789922351583:role/myrolrss3' 
+delimiter '|' region 'us-east-1';
+
+copy venue from 's3://mysamplebu/tickit/venue_pipe.txt' 
+credentials 'aws_iam_role=arn:aws:iam::789922351583:role/myrolrss3' 
+delimiter '|' region 'us-east-1';
+
+copy category from 's3://mysamplebu/tickit/category_pipe.txt' 
+credentials 'aws_iam_role=arn:aws:iam::789922351583:role/myrolrss3' 
+delimiter '|' region 'us-east-1';
+
+copy date from 's3://mysamplebu/tickit/date2008_pipe.txt' 
+credentials 'aws_iam_role=arn:aws:iam::789922351583:role/myrolrss3' 
+delimiter '|' region 'us-east-1';
+
+copy event from 's3://mysamplebu/tickit/allevents_pipe.txt' 
+credentials 'aws_iam_role=arn:aws:iam::789922351583:role/myrolrss3' 
+delimiter '|' timeformat 'YYYY-MM-DD HH:MI:SS' region 'us-east-1';
+
+copy listing from 's3://mysamplebu/tickit/listings_pipe.txt' 
+credentials 'aws_iam_role=arn:aws:iam::789922351583:role/myrolrss3' 
+delimiter '|' region 'us-east-1';
+
+copy sales from 's3://mysamplebu/tickit/sales_tab.txt'
+credentials 'aws_iam_role=arn:aws:iam::789922351583:role/myrolrss3' 
+delimiter '\t' timeformat 'MM/DD/YYYY HH:MI:SS' region 'us-east-1';
+
+Querying your data/analysis
+-- Get definition for the sales table.
+SELECT *    
+FROM pg_table_def    
+WHERE tablename = 'sales';    
+
+-- Find total sales on a given calendar date.
+SELECT sum(qtysold) 
+FROM   sales, date 
+WHERE  sales.dateid = date.dateid 
+AND    caldate = '2008-01-05';
+
+-- Find top 10 buyers by quantity.
+SELECT firstname, lastname, total_quantity 
+FROM   (SELECT buyerid, sum(qtysold) total_quantity
+        FROM  sales
+        GROUP BY buyerid
+        ORDER BY total_quantity desc limit 10) Q, users
+WHERE Q.buyerid = userid
+ORDER BY Q.total_quantity desc;
+
+-- Find events in the 99.9 percentile in terms of all time gross sales.
+SELECT eventname, total_price 
+FROM  (SELECT eventid, total_price, ntile(1000) over(order by total_price desc) as percentile 
+       FROM (SELECT eventid, sum(pricepaid) total_price
+             FROM   sales
+             GROUP BY eventid)) Q, event E
+       WHERE Q.eventid = E.eventid
+       AND percentile = 1
+ORDER BY total_price desc;
+

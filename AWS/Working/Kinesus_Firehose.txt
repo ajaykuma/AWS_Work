@@ -1,0 +1,57 @@
+Working with Kinesis Firehose
+------------------------
+
+Create Delivery Stream
+--name: TestDeliveryStream
+Source
+--direct put or other sources
+
+--Kinesis data stream
+Tranformation (if required before storing it on s3)
+
+Record Transformation: enabled
+(using AWS lambda)
+-create new lambda
+
+-choose 'General Firehose Processing'
+name: firehoseProcessing
+role: create a role (full s3 access)
+
+--Look into lamda function code and modify it
+(for example adding a new line after each entry)
+modification:
+---
+'use strict';
+console.log('Loading function');
+
+exports.handler = (event, context, callback) => {
+
+	/*process the list of records and transform them */
+	const output = event.records.map(record) => {
+		let entry = (new Buffer(record.data, 'base64')).toString('utf8'); //reading data and decoding it
+		let result = entry + "\n"					  //add a newline
+		const payload = (new Buffer(result , 'utf8')).toString('base64'); //encode it back
+	
+			return {
+				recordId: record.recordId,
+				result: 'Ok',
+				data: payload,
+			       };
+
+		});
+		console.log('Processing completed. Successful records ${output.length}.');
+		callback(null, {records: output });
+};
+---
+--change timeout to 1 min (requirement for kinesis)
+--destination: s3 bucket of ur choice
+--configure settings..
+...
+--choose appropriate role
+
+=================
+pushing data into delivery stream
+we can take data from Kinesis Data stream or using commands from CLI
+==========================
+Kinesis Data Firehose
+aws firehose put-record --delivery-stream-name xyz --record Data=100
